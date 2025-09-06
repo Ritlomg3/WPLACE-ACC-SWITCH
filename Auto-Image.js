@@ -564,7 +564,7 @@
     cooldownChargeThreshold: CONFIG.COOLDOWN_CHARGE_THRESHOLD,
     chargesThresholdInterval: null,
     tokenSource: CONFIG.TOKEN_SOURCE, // "generator" or "manual"
-    autoSwap: true,
+    autoSwap: false,
     initialSetupComplete: false, // Track if initial startup setup is complete (only happens once)
     overlayOpacity: CONFIG.OVERLAY.OPACITY_DEFAULT,
     blueMarbleEnabled: CONFIG.OVERLAY.BLUE_MARBLE_DEFAULT,
@@ -7649,6 +7649,29 @@
           break outerLoop;
         }
 
+        // Handle waiting for charges if auto-swap is disabled
+        if (!state.autoSwap) {
+          if (state.displayCharges < state.cooldownChargeThreshold && !state.stopFlag) {
+            await Utils.dynamicSleep(() => {
+              if (state.displayCharges >= state.cooldownChargeThreshold) {
+                NotificationManager.maybeNotifyChargesReached(true);
+                return 0;
+              }
+              if (state.stopFlag) return 0;
+              return getMsToTargetCharges(
+                state.preciseCurrentCharges,
+                state.cooldownChargeThreshold,
+                state.cooldown
+              );
+            });
+          }
+        }
+
+        if (state.stopFlag) {
+          // noinspection UnnecessaryLabelOnBreakStatementJS
+          break outerLoop;
+        }
+
         const targetPixelInfo = checkPixelEligibility(x, y);
         let absX = startX + x;
         let absY = startY + y;
@@ -7801,79 +7824,62 @@
           }
 
           pixelBatch.pixels = [];
-        }
 
-        if (state.autoSwap) {
-          // New auto-swap logic
-          if (state.displayCharges < 1 && !state.stopFlag) {
-            console.log("⚠️ Charges are 0, swapping to next account...");
+          if (state.autoSwap) {
+            if (state.displayCharges <= 1 && !state.stopFlag) {
+              console.log("⚠️ Charges are 1 or 0, swapping to next account...");
 
-            const accounts = JSON.parse(localStorage.getItem("accounts")) || [];
-            if (accounts.length === 0) {
-                console.warn("❌ No accounts available, stopping painting.");
-                state.stopFlag = true;
-                break outerLoop;
-            }
-
-            state.accountIndex = (state.accountIndex + 1) % accounts.length;
-            console.log("🔄 Switching to account index:", state.accountIndex);
-
-            const nextToken = accounts[state.accountIndex];
-            console.log("🔑 Next token:", nextToken);
-
-            if (!nextToken) {
-                console.warn("⚠️ Invalid token, skipping...");
-                continue;
-            }
-
-            swapAccountTrigger(nextToken);
-
-            let maxRetries = 20;
-            let retryCount = 0;
-            let swapSuccess = false;
-
-            while (!swapSuccess && retryCount < maxRetries) {
-                console.log(`⏳ Waiting for account swap... (Attempt ${retryCount + 1}/${maxRetries})`);
-
-                await Utils.sleep(1000);
-
-                try {
-                    await fetchAccount();
-                    console.log("✅ Account swap confirmed.");
-                    swapSuccess = true;
-                } catch (error) {
-                    console.warn("❌ Account swap not yet successful. Retrying...", error);
-                    retryCount++;
-                }
-            }
-
-            if (swapSuccess) {
-                const { charges, cooldown } = await WPlaceService.getCharges();
-                state.displayCharges = Math.floor(charges);
-                state.preciseCurrentCharges = charges;
-                state.cooldown = cooldown;
-                Utils.performSmartSave();
-                updateStats();
-            } else {
-                console.error("❌ Failed to swap account after multiple retries. Stopping loop.");
-                state.stopFlag = true;
-            }
-          }
-        } else {
-          // Original wait logic for single-account mode
-          if (state.displayCharges < state.cooldownChargeThreshold && !state.stopFlag) {
-            await Utils.dynamicSleep(() => {
-              if (state.displayCharges >= state.cooldownChargeThreshold) {
-                NotificationManager.maybeNotifyChargesReached(true);
-                return 0;
+              const accounts = JSON.parse(localStorage.getItem("accounts")) || [];
+              if (accounts.length === 0) {
+                  console.warn("❌ No accounts available, stopping painting.");
+                  state.stopFlag = true;
+                  break outerLoop;
               }
-              if (state.stopFlag) return 0;
-              return getMsToTargetCharges(
-                state.preciseCurrentCharges,
-                state.cooldownChargeThreshold,
-                state.cooldown
-              );
-            });
+
+              state.accountIndex = (state.accountIndex + 1) % accounts.length;
+              console.log("🔄 Switching to account index:", state.accountIndex);
+
+              const nextToken = accounts[state.accountIndex];
+              console.log("🔑 Next token:", nextToken);
+
+              if (!nextToken) {
+                  console.warn("⚠️ Invalid token, skipping...");
+                  continue;
+              }
+
+              swapAccountTrigger(nextToken);
+
+              let maxRetries = 20;
+              let retryCount = 0;
+              let swapSuccess = false;
+
+              while (!swapSuccess && retryCount < maxRetries) {
+                  console.log(`⏳ Waiting for account swap... (Attempt ${retryCount + 1}/${maxRetries})`);
+
+                  await Utils.sleep(1000);
+
+                  try {
+                      await fetchAccount();
+                      console.log("✅ Account swap confirmed.");
+                      swapSuccess = true;
+                  } catch (error) {
+                      console.warn("❌ Account swap not yet successful. Retrying...", error);
+                      retryCount++;
+                  }
+              }
+
+              if (swapSuccess) {
+                  const { charges, cooldown } = await WPlaceService.getCharges();
+                  state.displayCharges = Math.floor(charges);
+                  state.preciseCurrentCharges = charges;
+                  state.cooldown = cooldown;
+                  Utils.performSmartSave();
+                  updateStats();
+              } else {
+                  console.error("❌ Failed to swap account after multiple retries. Stopping loop.");
+                  state.stopFlag = true;
+              }
+            }
           }
         }
 
