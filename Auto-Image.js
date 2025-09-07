@@ -1534,8 +1534,20 @@
             throw error;
         }
     }
-  const randStr = (len, chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') =>
-    [...Array(len)].map(() => chars[(crypto?.getRandomValues?.(new Uint32Array(1))[0] % chars.length) || Math.floor(Math.random() * chars.length)]).join('')
+  const randStr = (
+    len,
+    chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  ) =>
+    [...Array(len)]
+      .map(
+        () =>
+          chars[
+            crypto?.getRandomValues?.(new Uint32Array(1))[0] % chars.length ||
+              Math.floor(Math.random() * chars.length)
+          ]
+      )
+      .join("");
+
     async function handleCaptchaFallback() {
         // Implementation for fallback token generation would go here
         // This is a placeholder for browser automation fallback
@@ -2829,7 +2841,7 @@
           coords: [pixelX, pixelY],
           colors: [color],
           t: turnstileToken,
-          fp: randStr(10),
+          fp: randStr(32),
         };
         var token = await createWasmToken(regionX, regionY, payload);
                 const res = await fetch(`https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`, {
@@ -2854,7 +2866,7 @@
 
         async getCharges() {
             try {
-                const res = await fetch("https://backend.wplace.live/me", {
+                const res = await fetch(`https://backend.wplace.live/me?fp=${randStr(32)}`, {
                     credentials: "include",
                 })
                 const data = await res.json()
@@ -2879,7 +2891,7 @@
 
         async fetchCheck() {
             try {
-                const res = await fetch("https://backend.wplace.live/me", {
+                const res = await fetch(`https://backend.wplace.live/me?fp=${randStr(32)}`, {
                     credentials: "include",
                 })
                 const data = await res.json()
