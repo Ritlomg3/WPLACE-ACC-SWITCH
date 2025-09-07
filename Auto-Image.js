@@ -8248,7 +8248,7 @@
   async function createWasmToken(regionX,regionY, payload) {
     try {
       // Load the Pawtect module and WASM
-      const mod = await import('/_app/immutable/chunks/BBb1ALhY.js');
+      const mod = await import('/_app/immutable/chunks/BdJF80pX.js');
       let wasm;
       try {
         wasm = await mod._();
