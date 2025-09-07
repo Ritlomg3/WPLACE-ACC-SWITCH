@@ -2840,8 +2840,7 @@
                 const payload = {
           coords: [pixelX, pixelY],
           colors: [color],
-          t: turnstileToken,
-          fp: randStr(32),
+                  t: turnstileToken
         };
         var token = await createWasmToken(regionX, regionY, payload);
                 const res = await fetch(`https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`, {
@@ -7939,7 +7938,7 @@
         }
 
         try {
-      const payload = { coords, colors, t: token, fp: randStr(10) };
+      const payload = { coords, colors, t: token };
       var wasmtoken = await createWasmToken(regionX, regionY, payload);
       const res = await fetch(`https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`, {
         method: 'POST',
@@ -7960,7 +7959,7 @@
                     turnstileToken = token;
 
                     // Retry the request with new token
-          const retryPayload = { coords, colors, t: token, fp: randStr(10) };
+          const retryPayload = { coords, colors, t: token };
           var wasmtoken = await createWasmToken(regionX, regionY, retryPayload);
           const retryRes = await fetch(
             `https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`,
